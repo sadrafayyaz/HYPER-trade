@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 Int                  @id @default(autoincrement())
+  fullName           String
+  email              String               @unique
+  phone              String?              @unique
+  password           String
+  role               UserRole             @default(USER)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  emailVerified      Boolean              @default(false)
+  isBlocked          Boolean              @default(false)
+  lastLogin          DateTime?
+  nationalCode       String?
+  phoneVerified      Boolean              @default(false)
+
+  kycRejectedAt      DateTime?
+  kycRejectionReason String?
+  kycStatus          String               @default("NOT_SUBMITTED")
+  kycSubmittedAt     DateTime?
+  kycVerifiedAt      DateTime?
+
+  lastRiskCheckAt    DateTime?
+  riskLevel          String               @default("LOW")
+  riskScore          Int                  @default(0)
+
+  orders             Order[]
+  platformFeeLedgers PlatformFeeLedger[]
+  feeSettings        PlatformFeeSettings?
+  supportTickets     SupportTicket[]
+  wallet             Wallet?
+  ledgerEntries      WalletLedgerEntry[]
+}
+
+model Wallet {
+  id                  Int      @id @default(autoincrement())
+  userId              Int      @unique
+
+  rialBalance         Decimal  @default(0) @db.Decimal(30, 2)
+  btcBalance          Decimal  @default(0) @db.Decimal(30, 12)
+  ethBalance          Decimal  @default(0) @db.Decimal(30, 12)
+  solBalance          Decimal  @default(0) @db.Decimal(30, 12)
+  trxBalance          Decimal  @default(0) @db.Decimal(30, 12)
+  usdtBalance         Decimal  @default(0) @db.Decimal(30, 8)
+
+  reservedRialBalance Decimal  @default(0) @db.Decimal(30, 2)
+  reservedBtcBalance  Decimal  @default(0) @db.Decimal(30, 12)
+  reservedEthBalance  Decimal  @default(0) @db.Decimal(30, 12)
+  reservedSolBalance  Decimal  @default(0) @db.Decimal(30, 12)
+  reservedTrxBalance  Decimal  @default(0) @db.Decimal(30, 12)
+  reservedUsdtBalance Decimal  @default(0) @db.Decimal(30, 8)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId])
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  userId       Int
+
+  symbol       String
+  side         OrderSide
+  amount       Decimal     @db.Decimal(30, 12)
+  price        Decimal     @db.Decimal(30, 12)
+  fee          Decimal     @db.Decimal(30, 12)
+  total        Decimal     @db.Decimal(30, 12)
+
+  status       OrderStatus @default(PENDING)
+  type         OrderType   @default(MARKET)
+
+  filledAmount Decimal     @default(0) @db.Decimal(30, 12)
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  executedAt   DateTime?
+
+  user         User        @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId])
+  @@index([symbol])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WalletLedgerEntry {
+  id           BigInt          @id @default(autoincrement())
+  userId       Int
+  orderId      Int?
+
+  asset        LedgerAsset
+  entryType    LedgerEntryType
+
+  amount       Decimal         @db.Decimal(38, 18)
+  balanceAfter Decimal         @db.Decimal(38, 18)
+
+  reference    String          @unique
+  description  String?
+
+  createdAt    DateTime        @default(now())
+
+  user         User            @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId, createdAt])
+  @@index([orderId])
+  @@index([asset])
+}
+
+model PlatformFeeSettings {
+  id                    Int      @id @default(1)
+
+  recipientAdminId      Int?     @unique
+
+  bankName              String?
+  bankAccountNumber     String?
+  bankCardNumber        String?
+  bankIban              String?
+  bankAccountHolder     String?
+
+  destinationCountry    String?
+  destinationCurrency   String?
+
+  cardCountryCode       String?
+  cardBin               String?
+  cardLast4             String?
+
+  fxSource              String?
+  fxRate                Decimal? @db.Decimal(38, 18)
+  fxRateUpdatedAt       DateTime?
+
+  updatedAt             DateTime @updatedAt
+
+  recipientAdmin        User?    @relation(
+    fields: [recipientAdminId],
+    references: [id]
+  )
+}
+
+model PlatformFeeLedger {
+  id               BigInt      @id @default(autoincrement())
+
+  orderId          Int         @unique
+
+  asset            LedgerAsset
+  amount           Decimal     @db.Decimal(38, 18)
+
+  status           FeeStatus   @default(ACCRUED)
+
+  ownerLabel       String      @default(
+    "Hyper Trade Owner Account"
+  )
+
+  reference        String      @unique
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  recipientAdminId Int?
+
+  recipientAdmin   User?       @relation(
+    fields: [recipientAdminId],
+    references: [id]
+  )
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([recipientAdminId])
+}
+
+model SupportTicket {
+  id         Int          @id @default(autoincrement())
+
+  userId     Int
+
+  subject    String
+  category   String       @default("GENERAL")
+  priority   String       @default("NORMAL")
+
+  status     TicketStatus @default(OPEN)
+
+  assignedTo Int?
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  closedAt   DateTime?
+
+  messages   SupportMessage[]
+
+  user       User         @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId])
+  @@index([status])
+}
+
+model SupportMessage {
+  id         BigInt   @id @default(autoincrement())
+
+  ticketId   Int
+
+  senderId   Int?
+  senderType String
+
+  message    String
+
+  createdAt  DateTime @default(now())
+
+  ticket     SupportTicket @relation(
+    fields: [ticketId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([ticketId, createdAt])
+  @@index([senderId])
+}
+
+model FeeSettlement {
+  id                  BigInt           @id @default(autoincrement())
+
+  adminId             Int
+
+  asset               LedgerAsset
+
+  amount              Decimal          @db.Decimal(38, 18)
+
+  // Original bank destination
+  bankName            String?
+  bankAccountNumber   String?
+  bankIban            String?
+
+  // Destination
+  destinationCountry  String?
+  destinationCurrency String?
+
+  // Card information
+  cardCountryCode     String?
+  cardBin             String?
+  cardLast4           String?
+
+  // Source amount / asset
+  sourceAmount        Decimal?         @db.Decimal(38, 18)
+  sourceAsset         LedgerAsset?
+
+  // FX conversion
+  exchangeRate        Decimal?         @db.Decimal(38, 18)
+  exchangeRateSource  String?
+  convertedAmount     Decimal?         @db.Decimal(38, 18)
+
+  // Settlement metadata
+  trackingNumber      String           @unique
+  description         String?
+
+  status              SettlementStatus @default(PAID)
+
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime
+
+  @@index([adminId])
+  @@index([asset])
+  @@index([createdAt])
+  @@index([status])
+  @@index([destinationCountry])
+  @@index([destinationCurrency])
+  @@index([cardBin])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum LedgerAsset {
+  RIAL
+  BTC
+  ETH
+  SOL
+  TRX
+  USDT
+}
+
+enum LedgerEntryType {
+  DEPOSIT
+  WITHDRAWAL
+  TRADE_DEBIT
+  TRADE_CREDIT
+  FEE
+  REFUND
+  RESERVATION
+  RELEASE
+  ADJUSTMENT
+}
+
+enum FeeStatus {
+  ACCRUED
+  SETTLED
+  CANCELLED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+  RESOLVED
+}
+
+enum SettlementStatus {
+  PENDING
+  PAID
+  CANCELLED
+}

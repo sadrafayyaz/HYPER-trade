@@ -1,0 +1,50 @@
+services:
+  hyper-trade-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: hyper-trade-backend
+
+    restart: unless-stopped
+
+    env_file:
+      - ./backend/.env
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+
+    container_name: hyper-trade-postgres
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: trading_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: CHANGE_DATABASE_PASSWORD
+
+    volumes:
+      - hyper_trade_postgres_data:/var/lib/postgresql/data
+
+    ports:
+      - "5432:5432"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d trading_ai"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  hyper_trade_postgres_data:

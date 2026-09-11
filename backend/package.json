@@ -1,0 +1,29 @@
+{
+  "name": "hyper-trade-backend",
+  "version": "1.0.0",
+  "description": "Hyper Trade cryptocurrency exchange backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "prisma:format": "prisma format",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.9.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.3.0",
+    "pg": "^8.23.0",
+    "prisma": "^7.9.1",
+    "ws": "^8.18.3"
+  }
+}
